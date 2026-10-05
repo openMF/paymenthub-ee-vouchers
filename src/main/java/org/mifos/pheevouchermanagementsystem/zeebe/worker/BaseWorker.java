@@ -6,10 +6,10 @@ import io.camunda.zeebe.client.api.worker.JobHandler;
 import jakarta.annotation.PostConstruct;
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;
+import org.mifos.pheevouchermanagementsystem.config.ZeebeProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,10 +19,10 @@ public abstract class BaseWorker {
     private ZeebeClient zeebeClient;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    protected ObjectMapper objectMapper;
 
-    @Value("${zeebe.client.evenly-allocated-max-jobs}")
-    private int workerMaxJobs;
+    @Autowired
+    private ZeebeProperties zeebeProperties;
 
     @Autowired
     protected CamelContext camelContext;
@@ -36,7 +36,8 @@ public abstract class BaseWorker {
     public abstract void setup();
 
     public void newWorker(Worker worker, JobHandler handler) {
-        zeebeClient.newWorker().jobType(worker.getValue()).handler(handler).name(worker.getValue()).maxJobsActive(workerMaxJobs).open();
+        zeebeClient.newWorker().jobType(worker.getValue()).handler(handler).name(worker.getValue())
+                .maxJobsActive(zeebeProperties.client().evenlyAllocatedMaxJobs()).open();
     }
 
 }

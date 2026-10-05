@@ -15,6 +15,7 @@ import jakarta.annotation.PostConstruct;
 import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.mifos.pheevouchermanagementsystem.config.OperationsApiProperties;
 import org.mifos.pheevouchermanagementsystem.domain.Voucher;
 import org.mifos.pheevouchermanagementsystem.exception.VoucherNotFoundException;
 import org.mifos.pheevouchermanagementsystem.repository.VoucherRepository;
@@ -30,10 +31,8 @@ public class CheckTransferStatusWorker {
     @Autowired
     private ZeebeClient zeebeClient;
 
-    @Value("${operations.hostname}")
-    private String operationHostname;
-    @Value("${operations.endpoints.transfers}")
-    public String transfersEndpoint;
+    @Autowired
+    private OperationsApiProperties operationsApiProperties;
     @Value("${maxRetry}")
     private int maxRetry;
     @Value("${thresholdDelay}")
@@ -65,9 +64,10 @@ public class CheckTransferStatusWorker {
                 requestSpec.header("Content-Type", "application/json");
                 String clientCorrelationId = existingVariables.get("clientCorrelationId").toString();
 
-                String response = RestAssured.given(requestSpec).baseUri(operationHostname).expect()
+                String response = RestAssured.given(requestSpec).baseUri(operationsApiProperties.hostname()).expect()
                         .spec(new ResponseSpecBuilder().expectStatusCode(200).build()).when()
-                        .get(transfersEndpoint + "&clientCorrelationId=" + clientCorrelationId).andReturn().asString();
+                        .get(operationsApiProperties.endpoints().transfers() + "&clientCorrelationId=" + clientCorrelationId).andReturn()
+                        .asString();
 
                 JSONObject responseJson = new JSONObject(response);
                 String status = null;
@@ -107,7 +107,7 @@ public class CheckTransferStatusWorker {
 
             }
 
-            client.newCompleteCommand(job.getKey()).variables(existingVariables).send();
+            client.newCompleteCommand(job.getKey()).variables(existingVariables).send().join();
         }).name("check-transfer-status").open();
     }
 }

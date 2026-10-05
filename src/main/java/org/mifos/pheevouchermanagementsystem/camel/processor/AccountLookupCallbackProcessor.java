@@ -56,7 +56,7 @@ public class AccountLookupCallbackProcessor implements Processor {
 
             zeebeClient.newPublishMessageCommand().messageName(ACCOUNT_LOOKUP)
                     .correlationKey(exchange.getProperty(CACHED_TRANSACTION_ID, String.class)).timeToLive(Duration.ofMillis(50000))
-                    .variables(variables).send();
+                    .variables(variables).send().join();
         }
     }
 }

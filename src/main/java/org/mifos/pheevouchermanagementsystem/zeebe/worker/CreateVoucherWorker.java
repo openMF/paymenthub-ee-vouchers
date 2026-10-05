@@ -12,6 +12,7 @@ import java.util.Map;
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;
 import org.json.JSONArray;
+import org.mifos.pheevouchermanagementsystem.config.ZeebeProperties;
 import org.mifos.pheevouchermanagementsystem.data.CallbackRequestDTO;
 import org.mifos.pheevouchermanagementsystem.data.SuccessfulVouchers;
 import org.mifos.pheevouchermanagementsystem.data.VoucherInstruction;
@@ -19,7 +20,6 @@ import org.mifos.pheevouchermanagementsystem.domain.ErrorTracking;
 import org.mifos.pheevouchermanagementsystem.service.CreateVoucherService;
 import org.mifos.pheevouchermanagementsystem.service.SendCallbackService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -31,8 +31,8 @@ public class CreateVoucherWorker extends BaseWorker {
     private ProducerTemplate producerTemplate;
     @Autowired
     private CamelContext camelContext;
-    @Value("${zeebe.client.evenly-allocated-max-jobs}")
-    private int workerMaxJobs;
+    @Autowired
+    private ZeebeProperties zeebeProperties;
     @Autowired
     private CreateVoucherService createVoucherService;
     @Autowired
@@ -55,9 +55,8 @@ public class CreateVoucherWorker extends BaseWorker {
                 List<VoucherInstruction> voucherInstructionList = (List<VoucherInstruction>) existingVariables.get("instructionList");
                 String requestId = existingVariables.get("requestId").toString();
                 String batchId = existingVariables.get("batchId").toString();
-                ObjectMapper mapper = new ObjectMapper();
                 String jsonString = new JSONArray(voucherInstructionList).toString();
-                List<VoucherInstruction> voucherInstructions = mapper.readValue(jsonString,
+                List<VoucherInstruction> voucherInstructions = objectMapper.readValue(jsonString,
                         new TypeReference<List<VoucherInstruction>>() {});
 
                 for (VoucherInstruction voucherInstruction : voucherInstructions) {
@@ -75,7 +74,7 @@ public class CreateVoucherWorker extends BaseWorker {
                 sendCallbackService.sendCallback("Voucher Creation Failed!", callbackURL);
             }
 
-            client.newCompleteCommand(job.getKey()).variables(existingVariables).send();
-        }).name(CREATE_VOUCHERS.getValue()).maxJobsActive(workerMaxJobs).open();
+            client.newCompleteCommand(job.getKey()).variables(existingVariables).send().join();
+        }).name(CREATE_VOUCHERS.getValue()).maxJobsActive(zeebeProperties.client().evenlyAllocatedMaxJobs()).open();
     }
 }

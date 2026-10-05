@@ -1,0 +1,27 @@
+# Test overrides only. The main application.yml still loads; this replaces the parts of it that
+# point at things which exist solely inside the cluster.
+#
+# Without this the one test the repository had - contextLoads - failed everywhere, because
+# application.yml points the datasource at jdbc:mysql://operationsmysql:3306, a hostname that only
+# resolves inside the paymenthub namespace:
+#
+#   Caused by: java.net.UnknownHostException: operationsmysql
+#
+# CI never noticed, because it runs checkstyleMain and bootJar and never runs the tests.
+spring:
+  datasource:
+    url: jdbc:h2:mem:vouchers;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  liquibase:
+    # The changelogs are written for MySQL, so Hibernate builds the schema here instead. This test
+    # profile is about being able to start the application at all, not about validating the migrations.
+    enabled: false
+
+zeebe:
+  broker:
+    contactpoint: "localhost:26500"

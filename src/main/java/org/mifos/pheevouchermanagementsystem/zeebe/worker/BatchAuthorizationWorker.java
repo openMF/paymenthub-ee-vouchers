@@ -12,6 +12,9 @@ import java.math.BigDecimal;
 import java.util.Map;
 import org.apache.camel.CamelContext;
 import org.apache.camel.ProducerTemplate;
+import org.mifos.pheevouchermanagementsystem.config.PayerProperties;
+import org.mifos.pheevouchermanagementsystem.config.VoucherProperties;
+import org.mifos.pheevouchermanagementsystem.config.ZeebeProperties;
 import org.mifos.pheevouchermanagementsystem.data.AuthorizationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,16 +29,19 @@ public class BatchAuthorizationWorker extends BaseWorker {
     private ProducerTemplate producerTemplate;
     @Autowired
     private CamelContext camelContext;
-    @Value("${zeebe.client.evenly-allocated-max-jobs}")
-    private int workerMaxJobs;
+    @Autowired
+    private ZeebeProperties zeebeProperties;
+    // Left as @Value on purpose. mock_schema.endpoints.batch_auth is appended to in the handler below, which is a
+    // defect (the field grows with every batch). Binding it into a record would make the field immutable and fix
+    // that silently, and it deserves its own ticket and its own test.
     @Value("${mock_schema.hostname}")
     private String mockSchemaHostname;
     @Value("${mock_schema.endpoints.batch_auth}")
     private String batchAuthEndpoint;
-    @Value("${voucher.hostname}")
-    private String voucherHostname;
-    @Value("${payer.identifier}")
-    private String payerIdentifier;
+    @Autowired
+    private VoucherProperties voucherProperties;
+    @Autowired
+    private PayerProperties payerProperties;
 
     @Override
     public void setup() {
@@ -48,12 +54,12 @@ public class BatchAuthorizationWorker extends BaseWorker {
             requestSpec.relaxedHTTPSValidation();
             requestSpec.header("X-Client-Correlation-ID", job.getKey());
             requestSpec.header("Content-Type", "application/json");
-            requestSpec.header("X-CallbackURL", voucherHostname + "/authorization/callbacks");
+            requestSpec.header("X-CallbackURL", voucherProperties.hostname() + "/authorization/callbacks");
             requestSpec.queryParam("command", "authorize");
             batchAuthEndpoint = batchAuthEndpoint + existingVariables.get("batchId").toString();
             AuthorizationRequest authorizationRequest = new AuthorizationRequest();
             authorizationRequest.setBatchId(existingVariables.get("batchId").toString());
-            authorizationRequest.setPayerIdentifier(payerIdentifier);
+            authorizationRequest.setPayerIdentifier(payerProperties.identifier());
             String totalAmount = existingVariables.get("totalAmount").toString();
             authorizationRequest.setAmount(new BigDecimal(totalAmount));
             authorizationRequest.setCurrency(existingVariables.get("currency").toString());
@@ -61,7 +67,7 @@ public class BatchAuthorizationWorker extends BaseWorker {
             String response = RestAssured.given(requestSpec).baseUri(mockSchemaHostname).body(authorizationRequest).expect()
                     .spec(new ResponseSpecBuilder().build()).when().post(batchAuthEndpoint).andReturn().asString();
 
-            client.newCompleteCommand(job.getKey()).variables(existingVariables).send();
-        }).name(BATCH_AUTH.getValue()).maxJobsActive(workerMaxJobs).open();
+            client.newCompleteCommand(job.getKey()).variables(existingVariables).send().join();
+        }).name(BATCH_AUTH.getValue()).maxJobsActive(zeebeProperties.client().evenlyAllocatedMaxJobs()).open();
     }
 }

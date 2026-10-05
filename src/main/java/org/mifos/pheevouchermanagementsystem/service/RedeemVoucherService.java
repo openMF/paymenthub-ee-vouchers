@@ -118,7 +118,6 @@ public class RedeemVoucherService {
                         "Voucher number Utilized!", redeemVoucherRequestDTO.getVoucherSecretNumber(), "",
                         LocalDateTime.now(ZoneId.systemDefault()).toString(), null);
 
-                ObjectMapper objectMapper = new ObjectMapper();
                 String body = objectMapper.writeValueAsString(redeemVoucherResponseDTO);
                 sendCallbackService.sendCallback(body, callbackURL);
             }

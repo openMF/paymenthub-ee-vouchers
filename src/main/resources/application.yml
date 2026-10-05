@@ -24,9 +24,6 @@ async:
 
 expiry_time: 60
 
-salting:
-  enabled: true
-
 identity-account-mapper:
   hostname : "https://identity-mapper.sandbox.mifos.io/"
 

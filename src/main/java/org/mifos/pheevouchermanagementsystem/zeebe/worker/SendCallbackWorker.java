@@ -4,7 +4,6 @@ import static org.mifos.pheevouchermanagementsystem.util.RedemptionStatusEnum.SU
 import static org.mifos.pheevouchermanagementsystem.zeebe.ZeebeVariables.PAYMENT_ADVICE;
 import static org.mifos.pheevouchermanagementsystem.zeebe.worker.Worker.VOUCHER_STATUS_SEND_CALLBACK;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -36,7 +35,6 @@ public class SendCallbackWorker extends BaseWorker {
                 RedeemVoucherResponseDTO redeemVoucherResponseDTO = new RedeemVoucherResponseDTO(SUCCESS.getValue(),
                         "Voucher redemption successful", existingVariables.get("voucherSerialNumber").toString(), null,
                         LocalDateTime.now(ZoneId.systemDefault()).toString(), existingVariables.get("transactionId").toString());
-                ObjectMapper objectMapper = new ObjectMapper();
                 String body = objectMapper.writeValueAsString(redeemVoucherResponseDTO);
                 logger.info("Sending callback on URL: {}", existingVariables.get("callbackURL"));
                 sendCallbackService.sendCallback(body, existingVariables.get("callbackURL").toString());
@@ -44,13 +42,12 @@ public class SendCallbackWorker extends BaseWorker {
                 RedeemVoucherResponseDTO redeemVoucherResponseDTO = new RedeemVoucherResponseDTO(SUCCESS.getValue(),
                         "Voucher redemption successful", existingVariables.get("voucherSerialNumber").toString(), null,
                         LocalDateTime.now(ZoneId.systemDefault()).toString(), existingVariables.get("transactionId").toString());
-                ObjectMapper objectMapper = new ObjectMapper();
                 String body = objectMapper.writeValueAsString(redeemVoucherResponseDTO);
                 logger.info("Sending callback on URL: {}", existingVariables.get("callbackURL"));
                 sendCallbackService.sendCallback(body, existingVariables.get("callbackURL").toString());
             }
 
-            client.newCompleteCommand(job.getKey()).variables(existingVariables).send();
+            client.newCompleteCommand(job.getKey()).variables(existingVariables).send().join();
         }).name(VOUCHER_STATUS_SEND_CALLBACK.getValue()).open();
     }
 }

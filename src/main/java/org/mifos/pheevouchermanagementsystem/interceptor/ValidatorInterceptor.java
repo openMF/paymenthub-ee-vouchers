@@ -23,6 +23,9 @@ public class ValidatorInterceptor implements HandlerInterceptor {
     @Autowired
     private ApplicationContext applicationContext;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (handler instanceof HandlerMethod) {
@@ -62,7 +65,6 @@ public class ValidatorInterceptor implements HandlerInterceptor {
     }
 
     private void handleValidationFailure(HttpServletResponse response, Object methodResponse) throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
         String jsonResponse = objectMapper.writeValueAsString(methodResponse);
         response.setHeader("Content-Type", "application/json");
         response.setStatus(HttpStatus.BAD_REQUEST.value());

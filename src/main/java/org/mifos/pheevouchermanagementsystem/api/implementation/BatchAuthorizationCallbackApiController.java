@@ -46,7 +46,7 @@ public class BatchAuthorizationCallbackApiController implements BatchAuthorizati
         if (zeebeClient != null) {
 
             zeebeClient.newPublishMessageCommand().messageName(BATCH_AUTHORIZATION).correlationKey(transactionId)
-                    .timeToLive(Duration.ofMillis(50000)).variables(variables).send();
+                    .timeToLive(Duration.ofMillis(50000)).variables(variables).send().join();
         }
         return ResponseEntity.status(HttpStatus.OK).body("Accepted");
     }

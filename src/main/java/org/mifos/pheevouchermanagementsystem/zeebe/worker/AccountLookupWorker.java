@@ -26,6 +26,10 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.apache.camel.support.DefaultExchange;
+import org.mifos.pheevouchermanagementsystem.config.IdentityAccountMapperProperties;
+import org.mifos.pheevouchermanagementsystem.config.PayerProperties;
+import org.mifos.pheevouchermanagementsystem.config.VoucherProperties;
+import org.mifos.pheevouchermanagementsystem.config.ZeebeProperties;
 import org.mifos.pheevouchermanagementsystem.data.AccountLookupResponseDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,18 +49,14 @@ public class AccountLookupWorker extends BaseWorker {
     private CamelContext camelContext;
     @Autowired
     private ObjectMapper objectMapper;
-    @Value("${identity-account-mapper.hostname}")
-    private String identityMapperURL;
-    @Value("${voucher.hostname}")
-    private String voucherHostname;
-    @Value("${payer.tenant}")
-    private String payerTenant;
-    @Value("${payer.identifier}")
-    private String payerIdentifier;
-    @Value("${payer.identifierType}")
-    private String payerIdentifierType;
-    @Value("${zeebe.client.evenly-allocated-max-jobs}")
-    private int workerMaxJobs;
+    @Autowired
+    private IdentityAccountMapperProperties identityAccountMapperProperties;
+    @Autowired
+    private VoucherProperties voucherProperties;
+    @Autowired
+    private PayerProperties payerProperties;
+    @Autowired
+    private ZeebeProperties zeebeProperties;
     @Value("${defaultPaymentModality}")
     private String paymentModality;
     private static final Logger logger = LoggerFactory.getLogger(AccountLookupWorker.class);
@@ -68,15 +68,15 @@ public class AccountLookupWorker extends BaseWorker {
             logger.info("Job '{}' started from process '{}' with key {}", job.getType(), job.getBpmnProcessId(), job.getKey());
             Map<String, Object> existingVariables = job.getVariablesAsMap();
             existingVariables.put(CACHED_TRANSACTION_ID, job.getKey());
-            existingVariables.put(PAYER_IDENTIFIER, payerIdentifier);
-            existingVariables.put(PAYER_IDENTIFIER_TYPE, payerIdentifierType);
+            existingVariables.put(PAYER_IDENTIFIER, payerProperties.identifier());
+            existingVariables.put(PAYER_IDENTIFIER_TYPE, payerProperties.identifierType());
 
-            existingVariables.put(INITIATOR_FSP_ID, payerTenant);
+            existingVariables.put(INITIATOR_FSP_ID, payerProperties.tenant());
             existingVariables.put(REQUEST_ID, job.getKey());
 
             Exchange exchange = new DefaultExchange(camelContext);
-            exchange.setProperty(HOST, identityMapperURL);
-            exchange.setProperty(CALLBACK, identityMapperURL + "/accountLookupCallback");
+            exchange.setProperty(HOST, identityAccountMapperProperties.hostname());
+            exchange.setProperty(CALLBACK, identityAccountMapperProperties.hostname() + "/accountLookupCallback");
             exchange.setProperty(TRANSACTION_ID, existingVariables.get(TRANSACTION_ID));
             exchange.setProperty(REQUEST_ID, job.getKey());
             exchange.setProperty(REGISTERING_INSTITUTION_ID, existingVariables.get("registeringInstitutionId").toString());
@@ -101,8 +101,8 @@ public class AccountLookupWorker extends BaseWorker {
                         accountLookupResponseDTO.getPaymentModalityList().get(0).getBankingInstitutionCode());
             }
 
-            client.newCompleteCommand(job.getKey()).variables(existingVariables).send();
-        }).name("payee-account-Lookup-voucher").maxJobsActive(workerMaxJobs).open();
+            client.newCompleteCommand(job.getKey()).variables(existingVariables).send().join();
+        }).name("payee-account-Lookup-voucher").maxJobsActive(zeebeProperties.client().evenlyAllocatedMaxJobs()).open();
 
     }
 }

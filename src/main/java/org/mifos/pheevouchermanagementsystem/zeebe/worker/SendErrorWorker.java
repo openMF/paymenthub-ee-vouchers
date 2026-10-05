@@ -46,7 +46,7 @@ public class SendErrorWorker {
             } catch (RuntimeException e) {
                 logger.error(e.getMessage());
             }
-            client.newCompleteCommand(job.getKey()).variables(existingVariables).send();
+            client.newCompleteCommand(job.getKey()).variables(existingVariables).send().join();
         }).name("send-failure-voucher").open();
     }
 }
