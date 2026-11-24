@@ -304,3 +304,7 @@ configure(this) {
         }
     }
 }
+
+bootJar {
+    archiveFileName = 'app.jar'
+}
