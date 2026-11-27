@@ -47,7 +47,7 @@ camel:
         auto-discover-object-mapper: true
 
 payer:
-  tenant: rhino
+  tenant: greenbank
   identifier: 12345678
   identifierType: MSISDN
 

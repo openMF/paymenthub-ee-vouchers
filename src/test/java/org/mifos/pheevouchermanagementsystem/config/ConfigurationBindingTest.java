@@ -48,7 +48,7 @@ class ConfigurationBindingTest {
         defaults.put("voucher.hostname", "https://vouchers.sandbox.mifos.io");
         defaults.put("operations.hostname", "https://ops-bk.sandbox.mifos.io");
         defaults.put("operations.endpoints.transfers", "/api/v1/transfers?size=1&page=0");
-        defaults.put("payer.tenant", "rhino");
+        defaults.put("payer.tenant", "greenbank");
         defaults.put("payer.identifier", "12345678");
         defaults.put("payer.identifierType", "MSISDN");
         return defaults;
@@ -97,7 +97,7 @@ class ConfigurationBindingTest {
     void payerPropertiesBind() {
         PayerProperties properties = bind(Map.of(), "payer", PayerProperties.class);
 
-        assertThat(properties.tenant()).isEqualTo("rhino");
+        assertThat(properties.tenant()).isEqualTo("greenbank");
         assertThat(properties.identifier()).isEqualTo("12345678");
         assertThat(properties.identifierType()).isEqualTo("MSISDN");
     }
